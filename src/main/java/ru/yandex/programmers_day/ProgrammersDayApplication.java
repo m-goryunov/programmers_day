@@ -4,7 +4,8 @@ public class ProgrammersDayApplication {
 
 	public static void main(String[] args) throws Exception {
 
-		Client client = new Client("http://ya.praktikum.fvds.ru:8080/dev-day");
+		Client4 client = new Client4();
 		client.sendDecodedString();
+
 	}
 }

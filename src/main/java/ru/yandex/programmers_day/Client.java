@@ -3,6 +3,9 @@ package ru.yandex.programmers_day;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -17,7 +20,6 @@ import java.nio.charset.StandardCharsets;
 public class Client {
 
     private final String url;
-
     private final HttpClient client = HttpClient.newHttpClient();
 
     public Client(String url) {
@@ -130,5 +132,67 @@ public class Client {
 
         System.out.println("Код ответа: " + response.statusCode());
         System.out.println("Тело ответа: " + response.body());
+    }
+
+    private static final char[] CHARACTERS = "0123456789ABCDEFabcdef".toCharArray();
+
+
+    public void guessString() throws IOException, InterruptedException {
+        int length = 8;
+        char[] guess = new char[length];
+
+        int low = 0;
+        int high = CHARACTERS.length - 1;
+
+        while (low <= high) {
+            int mid = low + (high - low) / 2;
+
+            guess[0] = CHARACTERS[mid];
+
+            //тут делаем запрос и узнаем знак
+            int x = getMoreOrLess(String.valueOf(guess));
+            if (x == -1) {
+                high = mid - 1;
+            } else if (x == 1) {
+                low = mid + 1;
+            } else {
+                return;
+            }
+        }
+    }
+
+
+    public int getMoreOrLess(String guess) throws IOException, InterruptedException {
+
+        String json = "{\"password\": \"" + guess + "\"}";
+
+        HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.ofString(json);
+        HttpRequest request = HttpRequest.newBuilder()
+                .POST(body)
+                .uri(URI.create("http://ya.praktikum.fvds.ru:8080/dev-day/task/3"))
+                .header("AUTH_TOKEN", "e4dfc14a-9afb-4867-94d2-29351cc15431")
+                .header("content-type", "application/json")
+                .build();
+
+        HttpResponse.BodyHandler<String> handler = HttpResponse.BodyHandlers.ofString();
+        HttpResponse<String> response = client.send(request, handler);
+
+        JsonElement jsonElement = JsonParser.parseString(response.body());
+        JsonObject jsonObject = jsonElement.getAsJsonObject();
+
+        String prompt = jsonObject.get("prompt").getAsString();
+        switch (prompt) {
+            case "<pass":
+                return -1;
+            case ">pass":
+                return 1;
+            case "Хммм,а вы точно помните из каких символов состоит пароль?":
+                return 2;
+            default:
+                System.out.println("Подбор завершен. " + guess);
+                System.out.println("Код ответа: " + response.statusCode());
+                System.out.println("Тело ответа: " + response.body());
+                return 0;
+        }
     }
 }
